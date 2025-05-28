@@ -15,11 +15,14 @@ void doComparisonTH1(TString fName1, TString fName2, std::vector<TString> vHistN
     {
         TH1 *h1 = GetTH<TH1>(fName1, histName);
         TH1 *h2 = GetTH<TH1>(fName2, histName);
+        h1->Scale(1 / h1->GetEntries());
+        h2->Scale(1 / h2->GetEntries());
         c = new TCanvas(Form("c_TH1_%s", histName.Data()), Form("c_TH1_%s", histName.Data()));
         c->cd();
-        h1->GetYaxis()->SetTitle("counts / total counts")
+        h1->GetYaxis()->SetTitle("counts / total counts");
         h1->Draw();
         h2->Draw("SAME");
+        h2->SetLineColor(kRed);
     }
 }
 
@@ -30,6 +33,8 @@ void doComparisonTH2(TString fName1, TString fName2, std::vector<TString> vHistN
     {
         TH2 *h1 = GetTH<TH2>(fName1, histName);
         TH2 *h2 = GetTH<TH2>(fName2, histName);
+        h1->Scale(1 / h1->GetEntries());
+        h2->Scale(1 / h2->GetEntries());
         c = new TCanvas(Form("c_TH2_%s", histName.Data()), Form("c_TH2_%s", histName.Data()));
         c->Divide(2,1);
         c->cd(1);
