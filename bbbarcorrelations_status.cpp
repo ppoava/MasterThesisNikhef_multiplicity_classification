@@ -74,7 +74,7 @@ int main(int argc, char** argv) {
 	
 	// Define variables that will be generated
 	Double_t pT, eta, y, phi, pTTrigger, pTAssociate, charge, DeltaPhiBB, status, mother, motherID;
-	Int_t  id, idBeauty, MULTIPLICITY, nEvents, beautiness;
+	Int_t  id, idBeauty, MULTIPLICITY, nMPIs, nEvents, beautiness;
 
 	// Define vectors that contain event-level information on the particles
 	vector<Int_t> vID;
@@ -99,7 +99,9 @@ int main(int argc, char** argv) {
 	tree->Branch("MOTHER",&vMother1);
 	tree->Branch("MOTHERID",&vMotherID);
 	tree->Branch("MULTIPLICITY",&MULTIPLICITY,"x/I");
+	tree->Branch("nMPIs",&nMPIs,"nMPIs/I");
 	TH1D* hMULTIPLICITY = new TH1D("hMULTIPLICITY","Multiplicity",301,-0.5,300.5);
+	TH1D* hNMPIs = new TH1D("hNMPIs","number of MPIs in event",100,0,50);
 	TH1D* hidBeauty = new TH1D("hidBeauty","PDG Codes for Beauty hadrons",12000,-6000,6000);
 	TH1D* hPtTrigger = new TH1D("hPtTrigger","p_{T} for trigger B^{+} ",50,0,10);
 	TH1D* hPtAssociate = new TH1D("hPtAssociate", "p_{T} for associate B^{+}",50,0,10);
@@ -134,6 +136,7 @@ int main(int argc, char** argv) {
 	for(int iEvent = 0; iEvent<nEvents; iEvent++) {
 	        if(!pythia.next()) continue;
 		int nPart = pythia.event.size(); // Number of particles produced in this event
+		nMPIs = pythia.info.nMPI();
 		MULTIPLICITY = 0; // Initialiazing for multiplicity plot
 		beautiness = 0; // Intialiazing for beauty production plot.
 		// Initializing vectors for event-level information
@@ -172,6 +175,9 @@ int main(int argc, char** argv) {
 			    MULTIPLICITY++; 
 			  }
 			}
+
+			// Don't consider events that don't pass kinematic cuts
+			if(MULTIPLICITY == 0) { continue; }
 			
 			if(IsBeauty(id)) {
 				idBeauty = id;
@@ -193,6 +199,7 @@ int main(int argc, char** argv) {
 		} // 1st particle loop
 
 		hMULTIPLICITY->Fill((Double_t) MULTIPLICITY);
+		hNMPIs->Fill((Int_t) nMPIs);
 		hBeautyPart->Fill((Double_t) beautiness);
 
 		// In order not to fill tree with empty vectors.
