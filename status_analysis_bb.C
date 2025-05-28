@@ -63,7 +63,7 @@ double computeSphericity(const std::vector<double>& px, const std::vector<double
         sumPt += p.Mod(); // pT = sqrt(px^2 + py^2)
     }
 
-    if (sumPt == 0) return -1; // Avoid division by zero
+    if (sumPt == 0) return -999; // Avoid division by zero
 
     for (int i = 0; i < nSteps; ++i) {
         double theta = TMath::Pi() * i / nSteps;
@@ -91,7 +91,7 @@ void status_file(Int_t id_trigger,Int_t id_associate, TString filename, const ch
 	TFile *output = new TFile(filename,"RECREATE");
 	
 	// OPTION 1: SINGLE FILE
-	ch1->Add("output_hardbbbar_1e5.root");
+	ch1->Add("output_minbias_JUNCTIONS_1e4.root");
 	
 	
 	// OPTION 2: BATCH FILE STRUCTURE
@@ -153,7 +153,7 @@ void status_file(Int_t id_trigger,Int_t id_associate, TString filename, const ch
 	ch1->SetBranchAddress("STATUS",&vStatus);
 	ch1->SetBranchAddress("MOTHER",&vMother1);
 	ch1->SetBranchAddress("MOTHERID",&vMotherID);
-	ch1->SetBranchAddress("nMPIS",&nMPIs);
+	ch1->SetBranchAddress("nMPIs",&nMPIs);
 	ch1->SetBranchAddress("MULTIPLICITY",&MULTIPLICITY);
 
 	// Variables used in this script
@@ -241,7 +241,7 @@ void status_file(Int_t id_trigger,Int_t id_associate, TString filename, const ch
 	TH1D* hMULT = new TH1D("hMULT",Form("Multiplicity per event for %s;multiplicity;Counts",title),100,0,400);
 
 	// Event classification variables
-	TH1D* hNMPIs = new TH1D("hNMPIs",Form("Number of MPIs per event for trigger %s;nMPIs;Counts",title),100,0,50);
+	TH1D* hNMPIs = new TH1D("hNMPIs",Form("Number of MPIs per event for trigger %s;nMPIs;Counts",title),50,0,50);
 	TH1D* hMultAll = new TH1D("hMultAll",Form("Event multiplicity (all particles) for trigger %s;multiplicity;Counts",title),100,0,300);
 	TH1D* hMultSoft = new TH1D("hMultSoft",Form("Event multiplicity (no beauty/charm) for trigger %s;multiplicity;Counts",title),100,0,300);
 	TH1D* hAvgPtAll = new TH1D("hAvgPtAll",Form("average pT (all particles) for trigger %s;<p_{T}>;Counts",title),100,0,2);
@@ -249,7 +249,7 @@ void status_file(Int_t id_trigger,Int_t id_associate, TString filename, const ch
 	TH1D* hSphAll = new TH1D("hSphAll",Form("Event sphericity (all particles) for trigger %s;<p_{T}>;Counts",title),100,0,1);
 	TH1D* hSphSoft = new TH1D("hSphSoft",Form("Event sphericity (no beauty/charm) for trigger %s;<p_{T}>;Counts",title),100,0,1);
 
-	TH2D* hNMPIs_hMult = new TH2D("hNMPIs_hMult",Form("Number of MPIs and multiplicity for trigger %s;nMPIs;multiplicity;Counts",title),100,0,50,100,0,300);
+	TH2D* hNMPIs_hMult = new TH2D("hNMPIs_hMult",Form("Number of MPIs and multiplicity for trigger %s;nMPIs;multiplicity;Counts",title),50,0,50,100,0,300);
 	TH2D* hMult_hAvgPt_All = new TH2D("hMult_hAvgPt_All", Form("Multiplicity and average pT (all particles) for trigger %s;multiplicity;<p_{T}>;Counts",title),100,0,300,100,0,2);
 	TH2D* hMult_hAvgPt_Soft = new TH2D("hMult_hAvgPt_Soft", Form("Multiplicity and average pT (no beauty/charm) for trigger %s;multiplicity;<p_{T}>;Counts",title),100,0,300,100,0,2);
 	TH2D* hMult_hSph_All = new TH2D("hMult_hSph_All", Form("Multiplicity and sphericity (all particles) for trigger %s;multiplicity;sphericity;Counts",title),100,0,300,100,0,1);

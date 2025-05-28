@@ -101,7 +101,7 @@ int main(int argc, char** argv) {
 	tree->Branch("MULTIPLICITY",&MULTIPLICITY,"x/I");
 	tree->Branch("nMPIs",&nMPIs,"nMPIs/I");
 	TH1D* hMULTIPLICITY = new TH1D("hMULTIPLICITY","Multiplicity",301,-0.5,300.5);
-	TH1D* hNMPIs = new TH1D("hNMPIs","number of MPIs in event",100,0,50);
+	TH1D* hNMPIs = new TH1D("hNMPIs","number of MPIs in event",50,0,50);
 	TH1D* hidBeauty = new TH1D("hidBeauty","PDG Codes for Beauty hadrons",12000,-6000,6000);
 	TH1D* hPtTrigger = new TH1D("hPtTrigger","p_{T} for trigger B^{+} ",50,0,10);
 	TH1D* hPtAssociate = new TH1D("hPtAssociate", "p_{T} for associate B^{+}",50,0,10);
@@ -117,7 +117,7 @@ int main(int argc, char** argv) {
 	
 	// Simulation settings from pythiasettings_Hard_Low_bb.cmnd
 	// The settings used are documented in that file
-	pythia.readFile("pythiasettings_Hard_Low_bb.cmnd");
+	pythia.readFile("pythiasettings_Hard_Low_bb_JUNCTIONS.cmnd");
 	nEvents = pythia.mode("Main:numberOfEvents");
 	
 	// Create a random seed so that the outcome will be truly random
