@@ -82,7 +82,7 @@ int main(int argc, char **argv)
 
 	// Define variables that will be generated
 	Double_t pT, eta, y, phi, pTTrigger, pTAssociate, charge, DeltaPhiDD, status, mother, motherID;
-	Int_t id, idCharm, MULTIPLICITY, nEvents, charmness;
+	Int_t id, idCharm, MULTIPLICITY, nMPIs, sph, nJets, nEvents, charmness;
 
 	// Define vectors that contain event-level information on the particles
 	vector<Int_t> vID;
@@ -107,7 +107,13 @@ int main(int argc, char **argv)
 	tree->Branch("MOTHER", &vMother1);
 	tree->Branch("MOTHERID", &vMotherID);
 	tree->Branch("MULTIPLICITY", &MULTIPLICITY, "x/I");
+	tree->Branch("nMPIs", &nMPIs, "nMPIs/I"); // make caps
+	// tree->Branch("SPH", &sph, "sph/D");
+	tree->Branch("nJets", &nJets, "nJets/I"); // make caps
 	TH1D *hMULTIPLICITY = new TH1D("hMULTIPLICITY", "Multiplicity", 301, -0.5, 300.5);
+	TH1D *hNMPIs = new TH1D("hNMPIs", "number of MPIs in event", 50, 0, 50);
+	// TH1D *hSph = new TH1D("hSph", "sphericity of event", 100, 0, 1);
+	TH1D *hNJets = new TH1D("hNJets", "number of jets in event", 20, 0, 20);
 	TH1D *hidCharm = new TH1D("hidCharm", "PDG Codes for Charm hadrons", 12000, -6000, 6000);
 	TH1D *hPtTrigger = new TH1D("hPtTrigger", "p_{T} for triger D^{+} ", 50, 0, 10);
 	TH1D *hPtAssociate = new TH1D("hPtAssociate", "p_{T} for associate D^{-}", 50, 0, 10);
@@ -120,6 +126,27 @@ int main(int argc, char **argv)
 
 	// Get PYTHIA
 	Pythia pythia;
+
+	// Get event analysis tools
+	// Used for sphericity and slowjet (to analyse jet structure of events)
+	// PROBLEM: sphericity returns 0 always? Seems to be related to not being able to apply kinematic cuts to selection?
+	// Paramters for Sphericity:
+	// int power_sphericity = 2;
+	// int select_sphericity = 3;		   // only final-state charged particles
+	// Parameters for SlowJet:
+	int power_slowJet = -1;		   // anti-kt
+	double R = 0.4;		   // jet radius
+	double pTjetMin = 5.0; // minimum pT
+	double etaMax = 4.0;   // max pseudorapidity
+	int select_slowJet = 3;		   // only final-state charged particles
+	int massSet = 2;	   // invariant mass scheme
+	SlowJetHook *sjHookPtr = nullptr;
+	bool useFJcore = true;
+	bool useStandardR = true;
+	// Initialise
+	// Sphericity sphericity(power_sphericity, select_sphericity);
+	SlowJet slowJet(power_slowJet, R, pTjetMin, etaMax, select_slowJet, massSet, sjHookPtr, useFJcore, useStandardR);
+
 
 	// Simulation settings from pythiasettings_Hard_Low_cc.cmnd
 	// The settings used are documented in that file
@@ -143,7 +170,18 @@ int main(int argc, char **argv)
 	{
 		if (!pythia.next())
 			continue;
+		// if (!sphericity.analyze(pythia.event))
+		//  	std::cout << "ERROR: Failed to calculate sphericity in event" << std::endl;
+		// sphericity.list();
+		if (!slowJet.analyze(pythia.event)) {
+			std::cout << "ERROR: Failed to do slowJet in event" << std::endl;
+		}
 		int nPart = pythia.event.size(); // Number of particles produced in this event
+		nMPIs = pythia.info.nMPI();
+		// sph = sphericity.sphericity();
+		// std::cout << "sphericity in event = " << sph << std::endl;
+		nJets = slowJet.sizeJet();
+		// std::cout << "number of jets in event = " << nJets << std::endl;
 		MULTIPLICITY = 0;				 // Initialiazing for multiplicity plot
 		charmness = 0;					 // Intialiazing for charm production plot
 		// Initializing vectors for event-level information
@@ -186,11 +224,19 @@ int main(int argc, char **argv)
 				}
 			}
 
-			if (!IsCharm(id))
+			// Don't consider events that don't pass kinematic cuts
+			if (MULTIPLICITY == 0)
+			{
 				continue;
-			idCharm = id;
-			hidCharm->Fill((Double_t)id);
-			charmness++;
+			}
+
+			if (!IsCharm(id)) 
+			{
+				idCharm = id;
+				hidCharm->Fill((Double_t)id);
+				charmness++;
+			}
+
 			// Filling vectors
 			vID.push_back(id);
 			vPt.push_back(pT);
@@ -233,6 +279,9 @@ int main(int argc, char **argv)
 		} // 1st particle loop
 
 		hMULTIPLICITY->Fill((Double_t)MULTIPLICITY);
+		hNMPIs->Fill((Int_t)nMPIs);
+		// hSph->Fill((Double_t)sph);
+		hNJets->Fill((Int_t)nJets);
 		hCharmPart->Fill((Double_t)charmness);
 
 		// In order not to fill tree with empty vectors.
