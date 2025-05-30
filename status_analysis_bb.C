@@ -114,16 +114,16 @@ void traceAncestry(int idx,
     traceAncestry(motherIdx, vID, vMother, vStatus, depth + 1);
 }
 
-void status_file(Int_t id_trigger,Int_t id_associate, TString filename, const char* title) {
+void status_file(Int_t id_trigger,Int_t id_associate, const char *fIn, const char *fOut, const char* title) {
 	// This functions takes the trigger and associate id and creates a ROOT output file with the same filename
         // containing the histograms produced in this macro
 	
 	// Define the TChain
 	TChain *ch1 = new TChain("tree");
-	TFile *output = new TFile(filename,"RECREATE");
+	TFile *output = new TFile(fOut,"RECREATE");
 	
 	// OPTION 1: SINGLE FILE
-	ch1->Add("output_hardbbbar_savingAllParticles_1e3.root");
+	ch1->Add(fIn);
 	
 	
 	// OPTION 2: BATCH FILE STRUCTURE
@@ -464,7 +464,7 @@ void status_file(Int_t id_trigger,Int_t id_associate, TString filename, const ch
 				hYTr->Fill(pY);
 				hTrPt->Fill(pPt);
 				hStatusTr->Fill(pStatus);
-				std::cout << "\nTracing ancestry for B+ in event " << iEvent << ", index " << ipart << std::endl;
+				// std::cout << "\nTracing ancestry for B+ in event " << iEvent << ", index " << ipart << std::endl;
             	// traceAncestry(ipart, *vID, *vMother1, *vStatus);
 
 				// *** --------- *** // 
@@ -650,18 +650,18 @@ void status_file(Int_t id_trigger,Int_t id_associate, TString filename, const ch
 	output->Close();
 	cout<<"The total number of triggers is: "<<nTrigger<<endl;
 	
-	cout<<"File: "<<filename<<" has been created!"<<endl;
+	cout<<"File: "<<fOut<<" has been created!"<<endl;
 }
 
 
-int status_analysis_bb() {
+int status_analysis_bb(const char *fIn, const char *fOut) {
 
         // Trigger and associate can be chosen as desired, correlations will be created and put into the output ROOT file as named in the function argument
 
         // TRIGGER = B+  
 
     // status_file(521,521,"BplusBplus.root","B^{+}B^{+}");
-	status_file(521,-521,"BplusBminus.root","B^{+}B^{-}");	
+	status_file(521,-521,fIn,fOut,"B^{+}B^{-}");	
 	/*
 	status_file(521,511,"BplusBzero.root","B^{+}B^{0}");
 	status_file(521,-511,"BplusBzerobar.root","B^{+}#barB^{0}");

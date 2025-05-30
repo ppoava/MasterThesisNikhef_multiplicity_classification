@@ -114,16 +114,16 @@ void traceAncestry(int idx,
     traceAncestry(motherIdx, vID, vMother, vStatus, depth + 1);
 }
 	
-void status_file(Int_t id_trigger,Int_t id_associate, TString filename, const char* title) {
+void status_file(Int_t id_trigger,Int_t id_associate, const char *fIn, const char *fOut, const char* title) {
         // This functions takes the trigger and associate id and creates a ROOT output file with the same filename
         // containing the histograms produced in this macro
 	
 	// Define the TChain
 	TChain *ch1 = new TChain("tree");
-	TFile *output = new TFile(filename,"RECREATE");
+	TFile *output = new TFile(fOut,"RECREATE");
 
 	// OPTION 1: SINGLE FILE
-	ch1->Add("output.root");
+	ch1->Add(fIn);
 
 	// OPTION 2: BATCH FILE STRUCTURE
 	// Number of trees to be added to the TChain
@@ -165,6 +165,7 @@ void status_file(Int_t id_trigger,Int_t id_associate, TString filename, const ch
 	vector<Int_t>* vID = 0;
 	vector<Double_t>* vPt = 0;
 	vector<Double_t>* vPhi = 0;
+	vector<Double_t>* vCharge = 0;
 	vector<Double_t>* vStatus = 0;
 	vector<Double_t>* vEta = 0;
 	vector<Double_t>* vY = 0;
@@ -178,6 +179,7 @@ void status_file(Int_t id_trigger,Int_t id_associate, TString filename, const ch
 	ch1->SetBranchAddress("ID",&vID);
 	ch1->SetBranchAddress("PT",&vPt);
 	ch1->SetBranchAddress("PHI",&vPhi);
+	ch1->SetBranchAddress("CHARGE",&vCharge);
 	ch1->SetBranchAddress("ETA",&vEta);
 	ch1->SetBranchAddress("Y",&vY);
 	ch1->SetBranchAddress("STATUS",&vStatus);
@@ -192,8 +194,8 @@ void status_file(Int_t id_trigger,Int_t id_associate, TString filename, const ch
 	// a indicates associate particle variables
 	Int_t aID,pID;
 	Double_t px,py;
-	Double_t pPt,pPhi,pStatus,pEta,pY,pMother,pMotherPhi,pMotherID;
-	Double_t aPt,aPhi,aStatus,aEta,aY,aMother,aMotherPhi,aMotherID;
+	Double_t pPt,pPhi,pCharge,pStatus,pEta,pY,pMother,pMotherPhi,pMotherID;
+	Double_t aPt,aPhi,aCharge,aStatus,aEta,aY,aMother,aMotherPhi,aMotherID;
 	int nTrigger = 0;
 
 	// Besides pT dependence, it is also interesting to look at the data as a function of multiplicity and (pseudo)rapidity
@@ -758,18 +760,19 @@ void status_file(Int_t id_trigger,Int_t id_associate, TString filename, const ch
 	output->Close();
 	cout<<"The total number of triggers is: "<<nTrigger<<endl;
 	
-	cout<<"File: "<<filename<<" has been created!"<<endl;
+	cout<<"File: "<<fOut<<" has been created!"<<endl;
 }
 
 
-int status_analysis_cc() {
+int status_analysis_cc(const char *fIn, const char *fOut) {
 
         // Trigger and associate can be chosen as desired, correlations will be created and put into the output ROOT file as named in the function argument 
 
         // TRIGGER = D+  
 
-	status_file(411,411,"DplusDplus.root","D^{+}D^{+}");
-	status_file(411,-411,"DplusDminus.root","D^{+}D^{-}");
+	// status_file(411,411,"DplusDplus.root","D^{+}D^{+}");
+	status_file(411,-411,fIn,fOut,"D^{+}D^{-}");
+	/*
 	status_file(411,421,"DplusDzero.root","D^{+}D^{0}");
 	status_file(411,-421,"DplusDzerobar.root","D^{+}#barD^{0}");
 	status_file(411,431,"DplusDsplus.root","D^{+}D_{s}^{+}");
@@ -782,6 +785,7 @@ int status_analysis_cc() {
 	status_file(411,-4212,"DplusSigmacplusbar.root","D^{+}#bar#Sigma_{c}^{+}");
 	status_file(411,4112,"DplusSigmaczero.root","D^{+}#Sigma_{c}^{0}");
 	status_file(411,-4112,"DplusSigmaczerobar.root","D^{+}#bar#Sigma_{c}^{0}");
+	*/
 
 	/*
 	// TRIGGER = D-
