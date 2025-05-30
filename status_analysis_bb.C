@@ -82,6 +82,38 @@ double computeSphericity(const std::vector<double>& px, const std::vector<double
     return (TMath::Pi() * TMath::Pi() / 4.0) * minValue;
 }
 
+void traceAncestry(int idx,
+                    std::vector<Int_t>& vID,
+                    std::vector<Double_t>& vMother,
+                    std::vector<Double_t>& vStatus,
+                   int depth = 0) {
+    if (idx < 0 || idx >= (int)vID.size()) {
+        std::cout << std::string(depth * 2, ' ') << "[Invalid index: " << idx << "]\n";
+        return;
+    }
+
+    int pdg = vID[idx];
+    int stat = vStatus[idx];
+    int motherIdx = vMother[idx];
+
+    std::cout << std::string(depth * 2, ' ')
+              << "Particle idx: " << idx
+              << ", PDG: " << pdg
+              << ", status: " << stat
+              << ", mother index: " << motherIdx << std::endl;
+
+	std::cout << "vID.size() = " << vID.size() << std::endl;
+
+    // Stop conditions
+    if (motherIdx <= 2 || motherIdx == idx || motherIdx >= (int)vID.size()) {
+        std::cout << std::string(depth * 2, ' ') << "[Stopping at idx: " << idx << "]\n";
+        return;
+    }
+
+    // Recurse to mother
+    traceAncestry(motherIdx, vID, vMother, vStatus, depth + 1);
+}
+
 void status_file(Int_t id_trigger,Int_t id_associate, TString filename, const char* title) {
 	// This functions takes the trigger and associate id and creates a ROOT output file with the same filename
         // containing the histograms produced in this macro
@@ -91,7 +123,7 @@ void status_file(Int_t id_trigger,Int_t id_associate, TString filename, const ch
 	TFile *output = new TFile(filename,"RECREATE");
 	
 	// OPTION 1: SINGLE FILE
-	ch1->Add("output_minbias_JUNCTIONS_1e4.root");
+	ch1->Add("output_hardbbbar_savingAllParticles_1e3.root");
 	
 	
 	// OPTION 2: BATCH FILE STRUCTURE
@@ -142,6 +174,7 @@ void status_file(Int_t id_trigger,Int_t id_associate, TString filename, const ch
 	vector<Double_t>* vMotherID = 0;
 	Int_t nMPIs = 0;
 	Int_t MULTIPLICITY = 0;
+	Int_t nJets = 0;
 
 	// Setting up chain branch addresses to the vectors defined above
 	ch1->SetBranchAddress("ID",&vID);
@@ -155,14 +188,15 @@ void status_file(Int_t id_trigger,Int_t id_associate, TString filename, const ch
 	ch1->SetBranchAddress("MOTHERID",&vMotherID);
 	ch1->SetBranchAddress("nMPIs",&nMPIs);
 	ch1->SetBranchAddress("MULTIPLICITY",&MULTIPLICITY);
+	ch1->SetBranchAddress("nJets",&nJets);
 
 	// Variables used in this script
 	// p indicates trigger particle variables
 	// a indicates associate particle variables
 	Int_t aID,pID;
 	Double_t px,py;
-	Double_t pPt,pPhi,pCharge,pStatus,pEta,pY,pMotherID;
-	Double_t aPt,aPhi,aCharge,aStatus,aEta,aY,aMotherID;
+	Double_t pPt,pPhi,pCharge,pStatus,pEta,pY,pMother,pMotherID;
+	Double_t aPt,aPhi,aCharge,aStatus,aEta,aY,aMother,aMotherID;
 	int nTrigger = 0;
 
 	// Besides pT dependence, it is also interesting to look at the data as a function of multiplicity and (pseudo)rapidity
@@ -244,6 +278,7 @@ void status_file(Int_t id_trigger,Int_t id_associate, TString filename, const ch
 	TH1D* hNMPIs = new TH1D("hNMPIs",Form("Number of MPIs per event for trigger %s;nMPIs;Counts",title),50,0,50);
 	TH1D* hMultAll = new TH1D("hMultAll",Form("Event multiplicity (all particles) for trigger %s;multiplicity;Counts",title),100,0,300);
 	TH1D* hMultSoft = new TH1D("hMultSoft",Form("Event multiplicity (no beauty/charm) for trigger %s;multiplicity;Counts",title),100,0,300);
+	TH1D* hNJets = new TH1D("hNJets",Form("Number of (cluster > 5 pT) jets per event (all particles) for trigger %s;nJets;Counts",title),20,0,20);
 	TH1D* hAvgPtAll = new TH1D("hAvgPtAll",Form("average pT (all particles) for trigger %s;<p_{T}>;Counts",title),100,0,2);
 	TH1D* hAvgPtSoft = new TH1D("hAvgPtSoft",Form("average pT (no beauty/charm) for trigger %s;<p_{T}>;Counts",title),100,0,2);
 	TH1D* hSphAll = new TH1D("hSphAll",Form("Event sphericity (all particles) for trigger %s;<p_{T}>;Counts",title),100,0,1);
@@ -254,6 +289,11 @@ void status_file(Int_t id_trigger,Int_t id_associate, TString filename, const ch
 	TH2D* hMult_hAvgPt_Soft = new TH2D("hMult_hAvgPt_Soft", Form("Multiplicity and average pT (no beauty/charm) for trigger %s;multiplicity;<p_{T}>;Counts",title),100,0,300,100,0,2);
 	TH2D* hMult_hSph_All = new TH2D("hMult_hSph_All", Form("Multiplicity and sphericity (all particles) for trigger %s;multiplicity;sphericity;Counts",title),100,0,300,100,0,1);
 	TH2D* hMult_hSph_Soft = new TH2D("hMult_hSph_Soft", Form("Multiplicity and sphericity (no beauty/charm) for trigger %s;multiplicity;sphericity;Counts",title),100,0,300,100,0,1);
+	TH2D* hMult_hNJets = new TH2D("hMult_hNJets",Form("Multiplicity and number of jets for trigger %s;multiplicity;nJets;Counts",title),100,0,300,20,0,20);
+	TH2D* hNJets_hSph_All = new TH2D("hNJets_hSph_All",Form("Number of jets and sphericity (all particles) for trigger %s;nJets;sphericity;Counts",title),20,0,20,100,0,1);
+	TH2D* hNJets_hSph_Soft = new TH2D("hNJets_hSph_Soft",Form("Number of jets and sphericity (no beauty/charm) for trigger %s;nJets;sphericity;Counts",title),20,0,20,100,0,1);
+	TH2D* hNJets_hAvgPt_All = new TH2D("hNJets_hAvgPt_All",Form("Number of jets and average pT (all particles) for trigger %s;nJets;<p_{T}>;Counts",title),20,0,20,100,0,2);
+	TH2D* hNJets_hAvgPt_Soft = new TH2D("hNJets_hAvgPt_Soft",Form("Number of jets and average pT (no beauty/charm) for trigger %s;nJets;<p_{T}>;Counts",title),20,0,20,100,0,2);
 	TH2D* hAvgPt_hSph_All = new TH2D("hAvgPt_hSph_All", Form("average pT and sphericity (all particles) for trigger %s;<p_{T}>;sphericity;Counts",title),100,0,2,100,0,1);
 	TH2D* hAvgPt_hSph_Soft = new TH2D("hAvgPt_hSph_Soft", Form("average pT and sphericity (no beauty/charm) for trigger %s;<p_{T}>;sphericity;Counts",title),100,0,2,100,0,1);
 
@@ -333,7 +373,7 @@ void status_file(Int_t id_trigger,Int_t id_associate, TString filename, const ch
 	// Important note: this does not take into account decay products from b and c hadrons!
 	// (this is studied here with "soft" and "all")
 	// This loop has to be done before the DPhi spectra, as the variables calculated here can be used as cuts later
-	for (int iEvent = 0; iEvent < nEvents; iEvent++) {
+	for (int iEvent = 0; iEvent < nEvents; iEvent++) { // nEvents
 		std::cout << "-----------------------------------------------------" << std::endl;
 		std::cout << "iEvent = " << iEvent << std::endl;
 		std::cout << "-----------------------------------------------------" << std::endl;
@@ -378,6 +418,7 @@ void status_file(Int_t id_trigger,Int_t id_associate, TString filename, const ch
 
 		hNMPIs->Fill(nMPIs);
 		hMultAll->Fill(MULTIPLICITY);
+		hNJets->Fill(nJets);
 		hAvgPtAll->Fill(avgPt_all);
 		hAvgPtSoft->Fill(avgPt_soft);
 		hSphAll->Fill(sph_all);
@@ -387,7 +428,12 @@ void status_file(Int_t id_trigger,Int_t id_associate, TString filename, const ch
 		hMult_hAvgPt_Soft->Fill(MULTIPLICITY,avgPt_soft);
 		hMult_hSph_All->Fill(MULTIPLICITY,sph_all);
 		hMult_hSph_Soft->Fill(MULTIPLICITY,sph_soft);
-		hAvgPt_hSph_All->Fill(avgPt_soft,sph_all);
+		hMult_hNJets->Fill(MULTIPLICITY,nJets);
+		hNJets_hSph_All->Fill(nJets,sph_all);
+		hNJets_hSph_Soft->Fill(nJets,sph_soft);
+		hNJets_hAvgPt_All->Fill(nJets,avgPt_all);
+		hNJets_hAvgPt_Soft->Fill(nJets,avgPt_soft);
+		hAvgPt_hSph_All->Fill(avgPt_all,sph_all);
 		hAvgPt_hSph_Soft->Fill(avgPt_soft,sph_soft);
 		// std::cout << "sphericity = " << sphericity << std::endl;
 	} // event loop
@@ -407,6 +453,7 @@ void status_file(Int_t id_trigger,Int_t id_associate, TString filename, const ch
 			pStatus = (*vStatus)[ipart];
 			pEta =(*vEta)[ipart];
 			pY = (*vY)[ipart]; // not to be confused with the y-component of the momentum, denoted py!
+			pMother = (*vMother1)[ipart];
 			pMotherID = (*vMotherID)[ipart];
 				
 			if(pID == id_trigger && pPt >= 1.) {
@@ -417,6 +464,8 @@ void status_file(Int_t id_trigger,Int_t id_associate, TString filename, const ch
 				hYTr->Fill(pY);
 				hTrPt->Fill(pPt);
 				hStatusTr->Fill(pStatus);
+				std::cout << "\nTracing ancestry for B+ in event " << iEvent << ", index " << ipart << std::endl;
+            	// traceAncestry(ipart, *vID, *vMother1, *vStatus);
 
 				// *** --------- *** // 
 

@@ -150,7 +150,7 @@ int main(int argc, char **argv)
 
 	// Simulation settings from pythiasettings_Hard_Low_cc.cmnd
 	// The settings used are documented in that file
-	pythia.readFile("pythiasettings_Hard_Low_cc.cmnd");
+	pythia.readFile("pythiasettings_Hard_Low_cc_JUNCTIONS.cmnd");
 	nEvents = pythia.mode("Main:numberOfEvents");
 
 	// Create a random seed so that the outcome will be truly random

@@ -18,11 +18,101 @@
 using namespace std;
 using namespace TMath;
 
+// Simple function that checks if a particle has any beauty content
+bool IsBeauty(Int_t particlepdg) {
+	Int_t pdg = abs(particlepdg);
+	pdg /= 10; // Last digit does not have to do with quark content
+	if(pdg % 10 == 5) return true; // 3rd quark
+	pdg /= 10;
+	if(pdg % 10 == 5) return true; // 2nd quark
+	pdg /= 10;
+	if(pdg % 10 == 5) return true; // 1st quark
+	return false;
+	}
+
+// Simple function that checks if a particle has any charm content
+bool IsCharm(Int_t particlepdg) {
+	Int_t pdg = abs(particlepdg);
+	pdg /= 10; // Last digit does not have to do with quark content
+	if(pdg % 10 == 4) return true; // 3rd quark
+	pdg /= 10;
+	if(pdg % 10 == 4) return true; // 2nd quark
+	pdg /= 10;
+	if(pdg % 10 == 4) return true; // 1st quark
+	return false;
+	}
+
 Double_t DeltaPhi(Double_t phi1, Double_t phi2) {
         // Returns delta phi in range -pi/2 3pi/2
         // Used to make the near- and away-side peak better visible 
 	return fmod(phi1-phi2+2.5*PI,2*PI)-0.5*PI;
 	}
+
+// Variable that classifies events with jets.
+// If close to 0, the event is more likely to have a (di-)jet.
+double computeSphericity(const std::vector<double>& px, const std::vector<double>& py) {
+    const int nSteps = 100; // angular resolution (this is very slow...)
+    double minValue = 1e9;
+
+    std::vector<TVector2> vPx_vPy;
+    double sumPt = 0;
+
+    for (size_t i = 0; i < px.size(); ++i) {
+        TVector2 p(px[i], py[i]);
+        vPx_vPy.push_back(p);
+        sumPt += p.Mod(); // pT = sqrt(px^2 + py^2)
+    }
+
+    if (sumPt == 0) return -999; // Avoid division by zero
+
+    for (int i = 0; i < nSteps; ++i) {
+        double theta = TMath::Pi() * i / nSteps;
+        TVector2 nHat(std::cos(theta), std::sin(theta));
+
+        double numerator = 0;
+        for (const auto& p : vPx_vPy)
+            numerator += std::abs(p.X() * nHat.Y() - p.Y() * nHat.X()); // |p × n|
+
+        double ratio = numerator / sumPt;
+        double value = ratio * ratio;
+        if (value < minValue)
+            minValue = value;
+    }
+
+    return (TMath::Pi() * TMath::Pi() / 4.0) * minValue;
+}
+
+void traceAncestry(int idx,
+                    std::vector<Int_t>& vID,
+                    std::vector<Double_t>& vMother,
+                    std::vector<Double_t>& vStatus,
+                   int depth = 0) {
+    if (idx < 0 || idx >= (int)vID.size()) {
+        std::cout << std::string(depth * 2, ' ') << "[Invalid index: " << idx << "]\n";
+        return;
+    }
+
+    int pdg = vID[idx];
+    int stat = vStatus[idx];
+    int motherIdx = vMother[idx];
+
+    std::cout << std::string(depth * 2, ' ')
+              << "Particle idx: " << idx
+              << ", PDG: " << pdg
+              << ", status: " << stat
+              << ", mother index: " << motherIdx << std::endl;
+
+	std::cout << "vID.size() = " << vID.size() << std::endl;
+
+    // Stop conditions
+    if (motherIdx <= 2 || motherIdx == idx || motherIdx >= (int)vID.size()) {
+        std::cout << std::string(depth * 2, ' ') << "[Stopping at idx: " << idx << "]\n";
+        return;
+    }
+
+    // Recurse to mother
+    traceAncestry(motherIdx, vID, vMother, vStatus, depth + 1);
+}
 	
 void status_file(Int_t id_trigger,Int_t id_associate, TString filename, const char* title) {
         // This functions takes the trigger and associate id and creates a ROOT output file with the same filename
@@ -80,7 +170,9 @@ void status_file(Int_t id_trigger,Int_t id_associate, TString filename, const ch
 	vector<Double_t>* vY = 0;
 	vector<Double_t>* vMother1 = 0;
 	vector<Double_t>* vMotherID = 0;
+	Int_t nMPIs = 0;
 	Int_t MULTIPLICITY = 0;
+	Int_t nJets = 0;
 	
 	// Setting up chain branch addresses to the vectors defined above
 	ch1->SetBranchAddress("ID",&vID);
@@ -91,12 +183,15 @@ void status_file(Int_t id_trigger,Int_t id_associate, TString filename, const ch
 	ch1->SetBranchAddress("STATUS",&vStatus);
 	ch1->SetBranchAddress("MOTHER",&vMother1);
 	ch1->SetBranchAddress("MOTHERID",&vMotherID);
+	ch1->SetBranchAddress("nMPIs",&nMPIs);
 	ch1->SetBranchAddress("MULTIPLICITY",&MULTIPLICITY);
+	ch1->SetBranchAddress("nJets",&nJets);
 	
 	// Variables used in this script
 	// p indicates trigger particle variables
 	// a indicates associate particle variables
 	Int_t aID,pID;
+	Double_t px,py;
 	Double_t pPt,pPhi,pStatus,pEta,pY,pMother,pMotherPhi,pMotherID;
 	Double_t aPt,aPhi,aStatus,aEta,aY,aMother,aMotherPhi,aMotherID;
 	int nTrigger = 0;
@@ -170,6 +265,29 @@ void status_file(Int_t id_trigger,Int_t id_associate, TString filename, const ch
 	TH1D* hYTr = new TH1D("hYTr",Form("Rapidity distribution for trigger %s;#eta;Counts",title),100,-4,4);
 	TH1D* hYAs = new TH1D("hYAs",Form("Rapidity distribution for associate %s;#eta;Counts",title),100,-4,4);
 	TH1D* hMULT = new TH1D("hMULT",Form("Multiplicity per event for %s;multiplicity;Counts",title),100,0,400);
+
+	// Event classification variables
+	TH1D* hNMPIs = new TH1D("hNMPIs",Form("Number of MPIs per event for trigger %s;nMPIs;Counts",title),50,0,50);
+	TH1D* hMultAll = new TH1D("hMultAll",Form("Event multiplicity (all particles) for trigger %s;multiplicity;Counts",title),100,0,300);
+	TH1D* hMultSoft = new TH1D("hMultSoft",Form("Event multiplicity (no beauty/charm) for trigger %s;multiplicity;Counts",title),100,0,300);
+	TH1D* hNJets = new TH1D("hNJets",Form("Number of (cluster > 5 pT) jets per event (all particles) for trigger %s;nJets;Counts",title),20,0,20);
+	TH1D* hAvgPtAll = new TH1D("hAvgPtAll",Form("average pT (all particles) for trigger %s;<p_{T}>;Counts",title),100,0,2);
+	TH1D* hAvgPtSoft = new TH1D("hAvgPtSoft",Form("average pT (no beauty/charm) for trigger %s;<p_{T}>;Counts",title),100,0,2);
+	TH1D* hSphAll = new TH1D("hSphAll",Form("Event sphericity (all particles) for trigger %s;<p_{T}>;Counts",title),100,0,1);
+	TH1D* hSphSoft = new TH1D("hSphSoft",Form("Event sphericity (no beauty/charm) for trigger %s;<p_{T}>;Counts",title),100,0,1);
+
+	TH2D* hNMPIs_hMult = new TH2D("hNMPIs_hMult",Form("Number of MPIs and multiplicity for trigger %s;nMPIs;multiplicity;Counts",title),50,0,50,100,0,300);
+	TH2D* hMult_hAvgPt_All = new TH2D("hMult_hAvgPt_All", Form("Multiplicity and average pT (all particles) for trigger %s;multiplicity;<p_{T}>;Counts",title),100,0,300,100,0,2);
+	TH2D* hMult_hAvgPt_Soft = new TH2D("hMult_hAvgPt_Soft", Form("Multiplicity and average pT (no beauty/charm) for trigger %s;multiplicity;<p_{T}>;Counts",title),100,0,300,100,0,2);
+	TH2D* hMult_hSph_All = new TH2D("hMult_hSph_All", Form("Multiplicity and sphericity (all particles) for trigger %s;multiplicity;sphericity;Counts",title),100,0,300,100,0,1);
+	TH2D* hMult_hSph_Soft = new TH2D("hMult_hSph_Soft", Form("Multiplicity and sphericity (no beauty/charm) for trigger %s;multiplicity;sphericity;Counts",title),100,0,300,100,0,1);
+	TH2D* hMult_hNJets = new TH2D("hMult_hNJets",Form("Multiplicity and number of jets for trigger %s;multiplicity;nJets;Counts",title),100,0,300,20,0,20);
+	TH2D* hNJets_hSph_All = new TH2D("hNJets_hSph_All",Form("Number of jets and sphericity (all particles) for trigger %s;nJets;sphericity;Counts",title),20,0,20,100,0,1);
+	TH2D* hNJets_hSph_Soft = new TH2D("hNJets_hSph_Soft",Form("Number of jets and sphericity (no beauty/charm) for trigger %s;nJets;sphericity;Counts",title),20,0,20,100,0,1);
+	TH2D* hNJets_hAvgPt_All = new TH2D("hNJets_hAvgPt_All",Form("Number of jets and average pT (all particles) for trigger %s;nJets;<p_{T}>;Counts",title),20,0,20,100,0,2);
+	TH2D* hNJets_hAvgPt_Soft = new TH2D("hNJets_hAvgPt_Soft",Form("Number of jets and average pT (no beauty/charm) for trigger %s;nJets;<p_{T}>;Counts",title),20,0,20,100,0,2);
+	TH2D* hAvgPt_hSph_All = new TH2D("hAvgPt_hSph_All", Form("average pT and sphericity (all particles) for trigger %s;<p_{T}>;sphericity;Counts",title),100,0,2,100,0,1);
+	TH2D* hAvgPt_hSph_Soft = new TH2D("hAvgPt_hSph_Soft", Form("average pT and sphericity (no beauty/charm) for trigger %s;<p_{T}>;sphericity;Counts",title),100,0,2,100,0,1);
 
 	// 2-dimensional histograms
 	TH2D* hTrPtEta = new TH2D("hPtEta",Form("pT and pseudorapidity trigger pT for trigger %s;p_{T};#eta;Counts",title),100,0,50,100,-4,4); 
@@ -277,11 +395,87 @@ void status_file(Int_t id_trigger,Int_t id_associate, TString filename, const ch
 	TH1D* hDPhiLLPrSc = new TH1D("hDPhiLLPrSc",Form("%s #Delta#phi correlations with prompt/non-prompt or vv production mechanism for low-low p_{T};#Delta#Phi (rad);Counts",title),100,-PI/2,3*PI/2);
 	TH1D* hDPhiHHPrSc = new TH1D("hDPhiHHPrSc",Form("%s #Delta#phi correlations with prompt/non-prompt or vv production mechanism for high-high p_{T};#Delta#Phi (rad);Counts",title),100,-PI/2,3*PI/2);
 	TH1D *hTrPtLLPr = new TH1D("hTrPtLLPr",Form("Trigger Transverse Momentum for %s from %.1f for low-low p_{T};p_{T} GeV/c;Counts",title,primary_status),100,0,50);
-        TH1D *hTrPtLLSc = new TH1D("hTrPtLLSc",Form("Trigger Transverse Momentum for %s from %.1f for low-low p_{T};p_{T} GeV/c;Counts",title,secondary_status),100,0,50);
-        TH1D *hTrPtLLPrSc = new TH1D("hTrPtLLPrSc",Form("Trigger Transverse Momentum for %s from %.1f and %.1f for low-low p_{T};p_{T} GeV/c;Counts",title,primary_status,secondary_status),100,0,50);
-        TH1D *hTrPtHHPr = new TH1D("hTrPtHHPr",Form("Trigger Transverse Momentum for %s from %.1f for high-high p_{T};p_{T} GeV/c;Counts",title,primary_status),100,0,50);
-        TH1D *hTrPtHHSc = new TH1D("hTrPtHHSc",Form("Trigger Transverse Momentum for %s from %.1f for high-high p_{T};p_{T} GeV/c;Counts",title,secondary_status),100,0,50);
-        TH1D *hTrPtHHPrSc = new TH1D("hTrPtHHPrSc",Form("Trigger Transverse Momentum for %s from %.1f and %.1f for high-high p_{T};p_{T} GeV/c;Counts",title,primary_status,secondary_status),100,0,50);
+	TH1D *hTrPtLLSc = new TH1D("hTrPtLLSc",Form("Trigger Transverse Momentum for %s from %.1f for low-low p_{T};p_{T} GeV/c;Counts",title,secondary_status),100,0,50);
+	TH1D *hTrPtLLPrSc = new TH1D("hTrPtLLPrSc",Form("Trigger Transverse Momentum for %s from %.1f and %.1f for low-low p_{T};p_{T} GeV/c;Counts",title,primary_status,secondary_status),100,0,50);
+	TH1D *hTrPtHHPr = new TH1D("hTrPtHHPr",Form("Trigger Transverse Momentum for %s from %.1f for high-high p_{T};p_{T} GeV/c;Counts",title,primary_status),100,0,50);
+	TH1D *hTrPtHHSc = new TH1D("hTrPtHHSc",Form("Trigger Transverse Momentum for %s from %.1f for high-high p_{T};p_{T} GeV/c;Counts",title,secondary_status),100,0,50);
+	TH1D *hTrPtHHPrSc = new TH1D("hTrPtHHPrSc",Form("Trigger Transverse Momentum for %s from %.1f and %.1f for high-high p_{T};p_{T} GeV/c;Counts",title,primary_status,secondary_status),100,0,50);
+
+// WORK IN PROGRESS
+	// -----------------------------------------------------------------------------------------------------------------------
+	// Event loop - calculating multiplicity classifying variables
+	// (i) average pT per event
+	// (ii) transverse spherocity
+	// (iii) forward multiplicity
+	// Important note: this does not take into account decay products from b and c hadrons!
+	// (this is studied here with "soft" and "all")
+	// This loop has to be done before the DPhi spectra, as the variables calculated here can be used as cuts later
+	for (int iEvent = 0; iEvent < nEvents; iEvent++) { // nEvents
+		std::cout << "-----------------------------------------------------" << std::endl;
+		std::cout << "iEvent = " << iEvent << std::endl;
+		std::cout << "-----------------------------------------------------" << std::endl;
+		ch1->GetEntry(iEvent);
+		int nparticles_all = vID->size();
+		int nparticles_charged = 0;
+		int nparticles_soft = 0;
+		double sumPt_all = 0;
+		double sumPt_soft = 0;
+		std::vector<double> vPx_all;
+		std::vector<double> vPy_all;
+		std::vector<double> vPx_soft;
+		std::vector<double> vPy_soft;
+
+		for (int ipart = 0; ipart < nparticles_all; ipart++) {
+			pID = (*vID)[ipart];
+			pPhi = (*vPhi)[ipart];
+			pPt = (*vPt)[ipart];
+			pCharge = (*vCharge)[ipart];
+			px = pPt * std::cos(pPhi);
+			py = pPt * std::sin(pPhi);
+
+			if (pCharge == 0) { continue; } // only consider charged particles
+
+			sumPt_all += pPt;
+			nparticles_charged += 1;
+			vPx_all.push_back(px);
+			vPy_all.push_back(py);
+
+			if (!IsBeauty(pID) && !IsCharm(pID)) {
+				nparticles_soft += 1;
+				sumPt_soft += pPt;
+				vPx_soft.push_back(px);
+				vPy_soft.push_back(py);
+			}
+		} // particle loop
+
+		double avgPt_all = sumPt_all / nparticles_charged;
+		double avgPt_soft = sumPt_soft / nparticles_soft;
+		double sph_all = computeSphericity(vPx_all, vPy_all);
+		double sph_soft = computeSphericity(vPx_soft, vPy_soft);
+
+		hNMPIs->Fill(nMPIs);
+		hMultAll->Fill(MULTIPLICITY);
+		hNJets->Fill(nJets);
+		hAvgPtAll->Fill(avgPt_all);
+		hAvgPtSoft->Fill(avgPt_soft);
+		hSphAll->Fill(sph_all);
+		hSphSoft->Fill(sph_soft);
+		hNMPIs_hMult->Fill(nMPIs,MULTIPLICITY);
+		hMult_hAvgPt_All->Fill(MULTIPLICITY,avgPt_all);
+		hMult_hAvgPt_Soft->Fill(MULTIPLICITY,avgPt_soft);
+		hMult_hSph_All->Fill(MULTIPLICITY,sph_all);
+		hMult_hSph_Soft->Fill(MULTIPLICITY,sph_soft);
+		hMult_hNJets->Fill(MULTIPLICITY,nJets);
+		hNJets_hSph_All->Fill(nJets,sph_all);
+		hNJets_hSph_Soft->Fill(nJets,sph_soft);
+		hNJets_hAvgPt_All->Fill(nJets,avgPt_all);
+		hNJets_hAvgPt_Soft->Fill(nJets,avgPt_soft);
+		hAvgPt_hSph_All->Fill(avgPt_all,sph_all);
+		hAvgPt_hSph_Soft->Fill(avgPt_soft,sph_soft);
+		// std::cout << "sphericity = " << sphericity << std::endl;
+	} // event loop
+	// -----------------------------------------------------------------------------------------------------------------------
+
 
 	// Event Loop
 	// Retrieve variables for trigger particle from event, naming is straight-forward
