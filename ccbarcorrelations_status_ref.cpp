@@ -159,9 +159,17 @@ int main(int argc, char** argv) {
 	// Event loop
 	for(int iEvent = 0; iEvent<nEvents; iEvent++){
 		if(!pythia.next()) continue;
+		if (!slowJet.analyze(pythia.event)) {
+			std::cout << "ERROR: Failed to do slowJet in event" << std::endl;
+		}
 		int nPart = pythia.event.size(); // Number of particles produced in this event
+		nMPIs = pythia.info.nMPI();
+		// sph = sphericity.sphericity();
+		// std::cout << "sphericity in event = " << sph << std::endl;
+		nJets = slowJet.sizeJet();
 		MULTIPLICITY = 0; // Initialiazing for multiplicity plot
 		charmness = 0; // Intialiazing for charm production plot
+		
 		// Initializing vectors for event-level information
 		vID.clear();
 		vPt.clear();
@@ -192,10 +200,16 @@ int main(int argc, char** argv) {
 			if(pT < pTmin || abs(eta) > etamax ) continue;
 			
 			if(abs(id) == 11 || abs(id) == 13 || abs(id) == 211 || abs(id) == 321 || abs(id) == 2212) { // Needs to be a primary particle                                                                                                                             
-                          if(81 <= status && status >= 89) { // Needs to be prompt                                                                                                                                                                                                
-                            MULTIPLICITY++;
-                          }
-                        }
+                if(81 <= status && status >= 89) { // Needs to be prompt                                                                                                                                                                                                
+                    MULTIPLICITY++;
+                }
+            }
+
+			// Don't consider events that don't pass kinematic cuts
+			if (MULTIPLICITY == 0)
+			{
+				continue;
+			}
 			
 			if(!IsCharm(id)) continue;
 				idCharm = id;
