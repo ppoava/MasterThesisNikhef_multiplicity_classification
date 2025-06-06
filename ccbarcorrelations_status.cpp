@@ -147,10 +147,9 @@ int main(int argc, char **argv)
 	// Sphericity sphericity(power_sphericity, select_sphericity);
 	SlowJet slowJet(power_slowJet, R, pTjetMin, etaMax, select_slowJet, massSet, sjHookPtr, useFJcore, useStandardR);
 
-
 	// Simulation settings from pythiasettings_Hard_Low_cc.cmnd
 	// The settings used are documented in that file
-	pythia.readFile("pythiasettings_Hard_Low_cc_JUNCTIONS.cmnd");
+	pythia.readFile("pythiasettings_Hard_Low_cc.cmnd");
 	nEvents = pythia.mode("Main:numberOfEvents");
 
 	// Create a random seed so that the outcome will be truly random
@@ -184,6 +183,7 @@ int main(int argc, char **argv)
 		// std::cout << "number of jets in event = " << nJets << std::endl;
 		MULTIPLICITY = 0;				 // Initialiazing for multiplicity plot
 		charmness = 0;					 // Intialiazing for charm production plot
+
 		// Initializing vectors for event-level information
 		vID.clear();
 		vPt.clear();
@@ -199,8 +199,7 @@ int main(int argc, char **argv)
 		for (int iPart = 0; iPart < nPart; iPart++)
 		{
 			const Particle &particle = pythia.event[iPart];
-			if (!particle.isFinal())
-				continue; // Skip if the particle is not at its final state
+			if (!particle.isFinal()) continue; // Skip if the particle is not at its final state
 
 			id = particle.id();
 			pT = particle.pT();
@@ -213,8 +212,7 @@ int main(int argc, char **argv)
 			motherID = static_cast<Double_t>(pythia.event[particle.mother1()].id());
 
 			// Kinematics check
-			if (pT < pTmin || abs(eta) > etamax)
-				continue;
+			if (pT < pTmin || abs(eta) > etamax) continue;
 
 			if (abs(id) == 11 || abs(id) == 13 || abs(id) == 211 || abs(id) == 321 || abs(id) == 2212)
 			{ // Needs to be a primary particle
@@ -224,13 +222,7 @@ int main(int argc, char **argv)
 				}
 			}
 
-			// Don't consider events that don't pass kinematic cuts
-			if (MULTIPLICITY == 0)
-			{
-				continue;
-			}
-
-			if (!IsCharm(id)) 
+			if (IsCharm(id)) 
 			{
 				idCharm = id;
 				hidCharm->Fill((Double_t)id);
@@ -249,7 +241,7 @@ int main(int argc, char **argv)
 			vMotherID.push_back(motherID);
 
 			// Creating D+D- correlation plots as check
-			if (id == 421)
+			if (id == 411)
 			{ // D+ meson triger
 
 				for (int jPart = 0; jPart < nPart; jPart++)
@@ -264,7 +256,7 @@ int main(int argc, char **argv)
 
 					if (associate_pT < pTmin || abs(associate_eta) > etamax)
 						continue;
-					if (associate_id == -421)
+					if (associate_id == -411)
 					{ // D- meson associate
 						pTTrigger = pT;
 						DeltaPhiDD = DeltaPhi(phi, particleB.phi());
@@ -277,6 +269,12 @@ int main(int argc, char **argv)
 				} // End of B meson triger particle loop.
 			} // End of B meson triger
 		} // 1st particle loop
+
+		// Don't consider events that don't pass kinematic cuts
+		if (MULTIPLICITY == 0)
+		{
+			continue;
+		}
 
 		hMULTIPLICITY->Fill((Double_t)MULTIPLICITY);
 		hNMPIs->Fill((Int_t)nMPIs);

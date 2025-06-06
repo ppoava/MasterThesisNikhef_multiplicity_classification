@@ -225,12 +225,6 @@ int main(int argc, char **argv)
 				}
 			}
 
-			// Don't consider events that don't pass kinematic cuts
-			if (MULTIPLICITY == 0)
-			{
-				continue;
-			}
-
 			if (IsBeauty(id))
 			{
 				idBeauty = id;
@@ -250,6 +244,12 @@ int main(int argc, char **argv)
 			vMotherID.push_back(motherID);
 
 		} // 1st particle loop
+
+		// Don't consider events that don't pass kinematic cuts
+		if (MULTIPLICITY == 0)
+		{
+			continue;
+		}
 
 		hMULTIPLICITY->Fill((Double_t)MULTIPLICITY);
 		hNMPIs->Fill((Int_t)nMPIs);
