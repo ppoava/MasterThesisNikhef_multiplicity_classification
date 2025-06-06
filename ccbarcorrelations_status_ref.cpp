@@ -204,12 +204,6 @@ int main(int argc, char** argv) {
                     MULTIPLICITY++;
                 }
             }
-
-			// Don't consider events that don't pass kinematic cuts
-			if (MULTIPLICITY == 0)
-			{
-				continue;
-			}
 			
 			if(!IsCharm(id)) continue;
 				idCharm = id;
@@ -249,6 +243,12 @@ int main(int argc, char** argv) {
 					} // End of B meson triger particle loop.
 				} // End of B meson triger
 		} // 1st particle loop
+
+		// Don't consider events that don't pass kinematic cuts
+		if (MULTIPLICITY == 0)
+		{
+			continue;
+		}
 
 		hMULTIPLICITY->Fill((Double_t) MULTIPLICITY);
 		hCharmPart->Fill((Double_t) charmness);

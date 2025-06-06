@@ -281,8 +281,8 @@ void status_file(Int_t id_trigger,Int_t id_associate, const char *fIn, const cha
 	TH1D* hNJets = new TH1D("hNJets",Form("Number of (cluster > 5 pT) jets per event (all particles) for trigger %s;nJets;Counts",title),20,0,20);
 	TH1D* hAvgPtAll = new TH1D("hAvgPtAll",Form("average pT (all particles) for trigger %s;<p_{T}>;Counts",title),100,0,2);
 	TH1D* hAvgPtSoft = new TH1D("hAvgPtSoft",Form("average pT (no beauty/charm) for trigger %s;<p_{T}>;Counts",title),100,0,2);
-	TH1D* hSphAll = new TH1D("hSphAll",Form("Event sphericity (all particles) for trigger %s;<p_{T}>;Counts",title),100,0,1);
-	TH1D* hSphSoft = new TH1D("hSphSoft",Form("Event sphericity (no beauty/charm) for trigger %s;<p_{T}>;Counts",title),100,0,1);
+	TH1D* hSphAll = new TH1D("hSphAll",Form("Event sphericity (all particles) for trigger %s;sphericity;Counts",title),100,0,1);
+	TH1D* hSphSoft = new TH1D("hSphSoft",Form("Event sphericity (no beauty/charm) for trigger %s;sphericity;Counts",title),100,0,1);
 
 	TH2D* hNMPIs_hMult = new TH2D("hNMPIs_hMult",Form("Number of MPIs and multiplicity for trigger %s;nMPIs;multiplicity;Counts",title),50,0,50,100,0,300);
 	TH2D* hMult_hAvgPt_All = new TH2D("hMult_hAvgPt_All", Form("Multiplicity and average pT (all particles) for trigger %s;multiplicity;<p_{T}>;Counts",title),100,0,300,100,0,2);

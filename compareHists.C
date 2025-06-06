@@ -46,13 +46,13 @@ void doComparisonTH2(TString fName1, TString fName2, std::vector<TString> vHistN
 
 int compareHists()
 {
-    std::vector<TString> vHistNamesTH1 = {"hMULT", "hNMPIs", "hAvgPtAll", "hAvgPtSoft", "hSphAll", "hSphSoft"};
+    std::vector<TString> vHistNamesTH1 = {"hMultAll", "hNMPIs", "hAvgPtAll", "hAvgPtSoft", "hSphAll", "hSphSoft"};
     std::vector<TString> vHistNamesTH2 = {"hNMPIs_hMult", "hMult_hAvgPt_All", "hMult_hAvgPt_Soft", "hMult_hSph_All", "hMult_hSph_Soft", "hMult_hNJets", "hNJets_hSph_All", "hNJets_hSph_Soft", "hNJets_hAvgPt_All", "hNJets_hAvgPt_Soft", "hAvgPt_hSph_All", "hAvgPt_hSph_Soft"};
 
-    doComparisonTH1("BplusBminus_minbias_bb_1e5.root", "BplusBminus_hardbbbar_1e5.root", vHistNamesTH1);
-    doComparisonTH2("BplusBminus_minbias_bb_1e5.root", "BplusBminus_hardbbbar_1e5.root", vHistNamesTH2);
+    // doComparisonTH1("BplusBminus_minbias_bb_1e5.root", "BplusBminus_hardbbbar_1e5.root", vHistNamesTH1);
+    // doComparisonTH2("BplusBminus_minbias_bb_1e5.root", "BplusBminus_hardbbbar_1e5.root", vHistNamesTH2);
 
-    // doComparisonTH1("DplusDminus_minbias_cc_1e5.root", "DplusDminus_hardccbar_1e5.root", vHistNamesTH1);
-    // doComparisonTH2("DplusDminus_minbias_cc_1e5.root", "DplusDminus_hardccbar_1e5.root", vHistNamesTH2);
+    doComparisonTH1("DplusDminus_minbias_cc_1e5.root", "DplusDminus_hardccbar_1e5.root", vHistNamesTH1);
+    doComparisonTH2("DplusDminus_minbias_cc_1e5.root", "DplusDminus_hardccbar_1e5.root", vHistNamesTH2);
     return 0;
 }
