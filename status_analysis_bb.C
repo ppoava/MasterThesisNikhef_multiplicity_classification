@@ -641,10 +641,11 @@ void status_file(Int_t id_trigger,Int_t id_associate, const char *fIn, const cha
 		} // Trigger Loop
 	} // End of event loop
 	
+	// TODO: fix bug with bb junctions.. Somehow no trigger particles are found ever?
 	if(nTrigger == 0){
 		cout<<"Have not found any trigger particle with id: "<<id_trigger<<endl;
-		output->Close();
-		return;
+		//output->Close();
+		//return;
 	}
 	output->Write();
 	output->Close();

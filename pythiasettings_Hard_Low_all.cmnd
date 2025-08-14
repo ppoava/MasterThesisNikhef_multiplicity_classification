@@ -31,7 +31,7 @@ Tune:pp = 14 					! tune 14 = MONASH
 
 ! HardQCD:all = on
 ! HardQCD:hardccbar = on
-HardQCD:hardbbbar = on
+! HardQCD:hardbbbar = on
 
 ! HardQCD:gg2gg = on
 ! HardQCD:gg2qqbar = on
@@ -41,7 +41,7 @@ HardQCD:hardbbbar = on
 ! HardQCD:qqbar2qqbarNew = on
 
 ! Minimum bias
-! SoftQCD:all = on     ! Enables all soft QCD processes (diffraction + non-diffraction. NO jets)
+SoftQCD:all = on     ! Enables all soft QCD processes (diffraction + non-diffraction. NO jets)
 
 ! Processes become divergent at low pT, need to define a lower bound
 PhaseSpace:pTHatMin = 1.
